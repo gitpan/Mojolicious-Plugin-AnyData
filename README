@@ -1,0 +1,63 @@
+Mojolicious::Plugin::AnyData
+============================
+This plugin for Mojolicious web-framework
+provides access to DBD::AnyData instance
+from mojolicious helper.
+
+It gives you a way to load up your test
+data directly from a memory or separate
+config files, not from database.
+
+It works ONLY in development mode, so you
+can use this plugin as a test data source,
+without a database connection.
+
+For more information see DBD::AnyData
+-----------------------------
+In Mojolicious::Lite
+
+plugin any_data => {
+    load_data => {
+        cars => [
+	    ['id', 'model'],
+	    [   1, 'Honda'],
+	    [   2, 'Lexus'],
+	],
+    },
+    helper => 'db',
+};
+
+get '/get-car/:id' => sub {
+    my $self = shift;
+    
+    my $id = $self->stash->{id};
+    my $model = $self->db->selectrow_array(qq{
+        select model
+	from cars
+	where
+	    id = ?
+    }, undef, $id);
+    
+    $self->render( text => $car );
+};
+
+get '/new-func' => sub {
+    my $self = shift;
+    
+    $self->dbh->func('cars_numbers', 'ARRAY', [
+        ['car_number', 'id'],
+	[     '12456',    1],
+	[     '34567',    2],
+    ], 'ad_import');
+    
+    my $cars_data = $self->db->selectrow_hashref(qq{
+        select
+	    model, car_number
+	from cars, cars_numbers
+	where
+	    cars.id = ?
+	        and cars.id = cars_numbers.id 
+    }, undef, 1);
+    
+    $self->reder(text => Dumper $cars_data);
+}
